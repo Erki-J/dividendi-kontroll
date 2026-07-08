@@ -23,9 +23,12 @@
     <!-- KONTROLL -->
     <section id="view-analyze" class="view">
       <form id="form" class="search">
-        <label for="symbol">Aktsia ticker (Yahoo Finance)</label>
+        <label for="symbol">Aktsia ticker või nimi</label>
         <div class="search-row">
-          <input id="symbol" name="symbol" type="text" placeholder="nt VZ, LIGHT, CPA1T, SEDY" autocomplete="off" required>
+          <div class="search-box">
+            <input id="symbol" name="symbol" type="text" placeholder="nt Verizon, TVE1T, Playtech…" autocomplete="off" required role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions">
+            <ul id="suggestions" class="suggestions hidden" role="listbox"></ul>
+          </div>
           <button type="submit" id="submit">Kontrolli</button>
         </div>
         <p class="hint">

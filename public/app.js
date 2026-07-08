@@ -4,6 +4,7 @@ const submitBtn = document.getElementById('submit');
 const errorEl = document.getElementById('error');
 const loadingEl = document.getElementById('loading');
 const resultsEl = document.getElementById('results');
+const suggestionsEl = document.getElementById('suggestions');
 
 const views = {
   analyze: document.getElementById('view-analyze'),
@@ -13,6 +14,108 @@ const views = {
 
 let calendarLoaded = false;
 let portfolioLoaded = false;
+let searchTimer = null;
+let searchItems = [];
+let activeIndex = -1;
+
+function hideSuggestions() {
+  suggestionsEl.classList.add('hidden');
+  suggestionsEl.innerHTML = '';
+  symbolInput.setAttribute('aria-expanded', 'false');
+  searchItems = [];
+  activeIndex = -1;
+}
+
+function selectSymbol(symbol) {
+  symbolInput.value = symbol;
+  hideSuggestions();
+  form.requestSubmit();
+}
+
+function renderSuggestions(items) {
+  searchItems = items;
+  activeIndex = -1;
+
+  if (!items.length) {
+    hideSuggestions();
+    return;
+  }
+
+  suggestionsEl.innerHTML = items.map((item, idx) => `
+    <li class="suggestion-item" role="option" data-index="${idx}" data-symbol="${item.symbol}">
+      <span class="suggestion-symbol">${item.symbol}</span>
+      <span class="suggestion-name">${item.name}</span>
+      <span class="suggestion-exchange">${item.exchange || ''}${item.source === 'local' ? ' · portfell' : ''}</span>
+    </li>
+  `).join('');
+
+  suggestionsEl.classList.remove('hidden');
+  symbolInput.setAttribute('aria-expanded', 'true');
+
+  suggestionsEl.querySelectorAll('.suggestion-item').forEach((el) => {
+    el.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      selectSymbol(el.dataset.symbol);
+    });
+  });
+}
+
+function highlightSuggestion(index) {
+  const nodes = suggestionsEl.querySelectorAll('.suggestion-item');
+  nodes.forEach((node, idx) => node.classList.toggle('active', idx === index));
+  activeIndex = index;
+  if (index >= 0 && nodes[index]) {
+    nodes[index].scrollIntoView({ block: 'nearest' });
+  }
+}
+
+async function fetchSuggestions(query) {
+  if (query.trim().length < 2) {
+    hideSuggestions();
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Otsing ebaõnnestus');
+    if (symbolInput.value.trim() !== query.trim()) return;
+    renderSuggestions(data.items || []);
+  } catch {
+    hideSuggestions();
+  }
+}
+
+symbolInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  const query = symbolInput.value;
+  searchTimer = setTimeout(() => fetchSuggestions(query), 280);
+});
+
+symbolInput.addEventListener('keydown', (e) => {
+  if (!searchItems.length) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    highlightSuggestion(Math.min(activeIndex + 1, searchItems.length - 1));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    highlightSuggestion(Math.max(activeIndex - 1, 0));
+  } else if (e.key === 'Enter' && activeIndex >= 0) {
+    e.preventDefault();
+    selectSymbol(searchItems[activeIndex].symbol);
+  } else if (e.key === 'Escape') {
+    hideSuggestions();
+  }
+});
+
+symbolInput.addEventListener('blur', () => {
+  setTimeout(hideSuggestions, 120);
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-box')) hideSuggestions();
+});
 
 document.querySelectorAll('.tab').forEach((tab) => {
   tab.addEventListener('click', () => switchView(tab.dataset.view));
@@ -31,6 +134,7 @@ form.addEventListener('submit', async (e) => {
   const symbol = symbolInput.value.trim();
   if (!symbol) return;
 
+  hideSuggestions();
   errorEl.classList.add('hidden');
   resultsEl.classList.add('hidden');
   loadingEl.classList.remove('hidden');

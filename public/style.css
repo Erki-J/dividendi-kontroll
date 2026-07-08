@@ -76,7 +76,12 @@ h1 { font-size: 32px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 8
 }
 .search label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
 .search-row { display: flex; gap: 10px; }
+.search-box {
+  position: relative;
+  flex: 1;
+}
 input {
+  width: 100%;
   flex: 1;
   background: var(--surface2);
   border: 1px solid var(--line);
@@ -120,6 +125,58 @@ button[type="submit"]:disabled { opacity: .6; cursor: wait; }
   cursor: pointer;
 }
 .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+.suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.suggestion-item {
+  display: grid;
+  grid-template-columns: 110px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.suggestion-item:hover,
+.suggestion-item.active {
+  background: var(--surface2);
+}
+
+.suggestion-symbol {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.suggestion-name {
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestion-exchange {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
 
 .panel {
   background: var(--surface);
@@ -439,4 +496,10 @@ h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--muted)
 @media (max-width: 600px) {
   .search-row { flex-direction: column; }
   button[type="submit"] { padding: 12px; }
+  .suggestion-item {
+    grid-template-columns: 90px 1fr;
+  }
+  .suggestion-exchange {
+    grid-column: 2;
+  }
 }

@@ -507,6 +507,94 @@ async function mapWithConcurrency(items, fn, limit = 4) {
   return results;
 }
 
+function searchLocal(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+
+  const seen = new Set();
+  const items = [];
+
+  function add(item) {
+    const key = item.symbol.toUpperCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push(item);
+  }
+
+  for (const [alias, symbol] of Object.entries(ALIAS_MAP)) {
+    if (!alias.toLowerCase().includes(q) && !symbol.toLowerCase().includes(q)) continue;
+    const watch = WATCHLIST.find((w) => w.symbol === symbol);
+    add({
+      symbol,
+      name: watch?.label || alias,
+      exchange: 'Portfell',
+      source: 'local',
+    });
+  }
+
+  for (const item of WATCHLIST) {
+    const base = item.symbol.split('.')[0].toLowerCase();
+    if (
+      item.symbol.toLowerCase().includes(q)
+      || item.label.toLowerCase().includes(q)
+      || base.includes(q)
+    ) {
+      add({
+        symbol: item.symbol,
+        name: item.label,
+        exchange: 'Portfell',
+        source: 'local',
+      });
+    }
+  }
+
+  return items;
+}
+
+async function searchSymbols(query) {
+  const q = query.trim();
+  if (q.length < 2) return [];
+
+  const local = searchLocal(q);
+  let remote = [];
+
+  try {
+    const result = await yahooFinance.search(q, { quotesCount: 10, newsCount: 0 });
+    remote = (result.quotes || [])
+      .filter((row) => row.symbol && ['EQUITY', 'ETF', 'MUTUALFUND'].includes(row.quoteType))
+      .map((row) => ({
+        symbol: row.symbol,
+        name: row.shortname || row.longname || row.symbol,
+        exchange: row.exchDisp || row.exchange || '',
+        source: 'yahoo',
+      }));
+  } catch {
+    remote = [];
+  }
+
+  const seen = new Set();
+  const merged = [];
+
+  for (const item of [...local, ...remote]) {
+    const key = item.symbol.toUpperCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(item);
+    if (merged.length >= 8) break;
+  }
+
+  return merged;
+}
+
+app.get('/api/search', async (req, res) => {
+  try {
+    const items = await searchSymbols(req.query.q || '');
+    res.json({ items });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Otsing ebaõnnestus.', items: [] });
+  }
+});
+
 app.get('/api/analyze/:symbol', async (req, res) => {
   try {
     const data = await analyzeStock(req.params.symbol);
