@@ -85,20 +85,25 @@ function renderAnalysis(data) {
   verdictEl.className = `verdict ${v.level}`;
   verdictEl.innerHTML = `<strong>${v.title}</strong>${v.text}`;
 
-  const kpis = [
-    { lbl: 'Aastane dividend', val: data.annualDividend != null ? `${data.annualDividend} ${data.currency || ''}` : '—' },
-    { lbl: 'Hind', val: data.price != null ? `${data.price} ${data.currency || ''}` : '—' },
-    { lbl: 'Ex-dividend', val: data.exDividendDateFmt || '—' },
-  ];
-
   document.getElementById('kpi-yield').innerHTML = `
     <div class="lbl">Dividenditootlus</div>
     <div class="val">${data.dividendYield != null ? `${data.dividendYield}%` : '—'}</div>
   `;
 
-  document.getElementById('kpis-rest').innerHTML = kpis.map((k) => `
-    <div class="kpi"><div class="lbl">${k.lbl}</div><div class="val">${k.val}</div></div>
-  `).join('');
+  document.getElementById('kpi-annual').innerHTML = `
+    <div class="lbl">Aastane dividend</div>
+    <div class="val">${data.annualDividend != null ? `${data.annualDividend} ${data.currency || ''}` : '—'}</div>
+  `;
+
+  document.getElementById('kpi-price').innerHTML = `
+    <div class="lbl">Hind</div>
+    <div class="val">${data.price != null ? `${data.price} ${data.currency || ''}` : '—'}</div>
+  `;
+
+  document.getElementById('kpi-ex').innerHTML = `
+    <div class="lbl">Ex-dividend</div>
+    <div class="val">${data.exDividendDateFmt || '—'}</div>
+  `;
 
   document.getElementById('checks').innerHTML = data.checks.map((c) => `
     <article class="check ${c.status}">
@@ -114,7 +119,11 @@ function renderAnalysis(data) {
     histSection.classList.remove('hidden');
     const sorted = [...data.annualDividends].sort((a, b) => b.year - a.year);
     histEl.innerHTML = sorted.map((y) => `
-      <div class="year-pill"><strong>${y.year}</strong>${y.total.toFixed(2)} / aktsia</div>
+      <div class="year-pill kpi-style">
+        <strong>${y.year}</strong>
+        <div class="year-val">${y.total.toFixed(2)}</div>
+        <span class="year-unit">/ aktsia</span>
+      </div>
     `).join('');
   } else {
     histSection.classList.add('hidden');
