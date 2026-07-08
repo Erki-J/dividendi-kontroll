@@ -4,6 +4,8 @@ Dividendide jätkusuutlikkuse kontroll, ex-kuupäevade kalender ja portfelli ska
 
 **GitHub:** https://github.com/Erki-J/dividendi-kontroll
 
+**Veebileht:** https://dividendi-kontroll.vercel.app
+
 ## Veebileht (Render — tasuta)
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Erki-J/dividendi-kontroll)
