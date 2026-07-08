@@ -86,12 +86,17 @@ function renderAnalysis(data) {
   verdictEl.innerHTML = `<strong>${v.title}</strong>${v.text}`;
 
   const kpis = [
-    { lbl: 'Dividenditootlus', val: data.dividendYield != null ? `${data.dividendYield}%` : '—' },
     { lbl: 'Aastane dividend', val: data.annualDividend != null ? `${data.annualDividend} ${data.currency || ''}` : '—' },
     { lbl: 'Hind', val: data.price != null ? `${data.price} ${data.currency || ''}` : '—' },
     { lbl: 'Ex-dividend', val: data.exDividendDateFmt || '—' },
   ];
-  document.getElementById('kpis').innerHTML = kpis.map((k) => `
+
+  document.getElementById('kpi-yield').innerHTML = `
+    <div class="lbl">Dividenditootlus</div>
+    <div class="val">${data.dividendYield != null ? `${data.dividendYield}%` : '—'}</div>
+  `;
+
+  document.getElementById('kpis-rest').innerHTML = kpis.map((k) => `
     <div class="kpi"><div class="lbl">${k.lbl}</div><div class="val">${k.val}</div></div>
   `).join('');
 
