@@ -43,6 +43,22 @@ function fmtDate(d) {
   return dt.toLocaleDateString('et-EE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+/** Suur number → lühivorm (nt 1.48 mld, 337 mln). */
+function fmtBig(v) {
+  if (v == null || Number.isNaN(v)) return null;
+  const abs = Math.abs(v);
+  const sign = v < 0 ? '-' : '';
+  if (abs >= 1e9) return `${sign}${(abs / 1e9).toFixed(2)} mld`;
+  if (abs >= 1e6) return `${sign}${(abs / 1e6).toFixed(0)} mln`;
+  if (abs >= 1e3) return `${sign}${(abs / 1e3).toFixed(0)} tuh`;
+  return `${sign}${abs.toFixed(0)}`;
+}
+
+function tsYear(row) {
+  const d = row?.date instanceof Date ? row.date : new Date(row?.date);
+  return Number.isNaN(d.getTime()) ? null : d.getFullYear();
+}
+
 function daysUntil(d) {
   if (!d) return null;
   const dt = d instanceof Date ? d : new Date(d);
@@ -344,6 +360,39 @@ async function fetchQuoteLite(symbolInput) {
   };
 }
 
+async function fetchFundamentals(ticker) {
+  const period1 = new Date();
+  period1.setFullYear(period1.getFullYear() - 6);
+  let rows;
+  try {
+    rows = await yahooFinance.fundamentalsTimeSeries(ticker, {
+      period1,
+      type: 'annual',
+      module: 'all',
+    });
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(rows)) return [];
+
+  return rows
+    .map((r) => {
+      const year = tsYear(r);
+      if (year == null) return null;
+      const debt = r.totalDebt ?? null;
+      const cash = r.cashAndCashEquivalents ?? null;
+      const equity = r.stockholdersEquity ?? null;
+      const fcf = r.freeCashFlow ?? null;
+      const netIncome = r.netIncome ?? null;
+      const netDebt = debt != null && cash != null ? debt - cash : null;
+      const roe = netIncome != null && equity ? netIncome / equity : null;
+      return { year, debt, cash, netDebt, equity, freeCashFlow: fcf, netIncome, roe };
+    })
+    .filter((r) => r && (r.debt != null || r.equity != null || r.freeCashFlow != null || r.netIncome != null))
+    .sort((a, b) => b.year - a.year)
+    .slice(0, 4);
+}
+
 async function analyzeStock(symbolInput) {
   const { symbol: ticker, resolvedFrom } = resolveSymbol(symbolInput, ALIAS_MAP);
   if (!ticker) throw new Error('Sisesta aktsia ticker.');
@@ -353,8 +402,9 @@ async function analyzeStock(symbolInput) {
 
   let summaryResult;
   let chartResult;
+  let fundamentals = [];
   try {
-    [summaryResult, chartResult] = await Promise.all([
+    [summaryResult, chartResult, fundamentals] = await Promise.all([
       yahooFinance.quoteSummary(ticker, {
         modules: ['price', 'summaryDetail', 'calendarEvents', 'financialData', 'defaultKeyStatistics'],
       }),
@@ -362,6 +412,7 @@ async function analyzeStock(symbolInput) {
         period1: tenYearsAgo,
         events: 'div',
       }).catch(() => ({ events: { dividends: {} } })),
+      fetchFundamentals(ticker).catch(() => []),
     ]);
   } catch (err) {
     const hint = aliasHint(symbolInput);
@@ -380,6 +431,20 @@ async function analyzeStock(symbolInput) {
     const hint = aliasHint(symbolInput);
     throw new Error(`Aktsiat "${symbolInput.trim().toUpperCase()}" ei leitud.${hint ? ` ${hint}` : ''}`);
   }
+
+  const finCurrency = financial?.financialCurrency || price?.financialCurrency || price?.currency || '';
+  const financialYears = fundamentals.map((r) => ({
+    year: r.year,
+    netDebt: r.netDebt != null ? fmtBig(r.netDebt) : null,
+    netDebtRaw: r.netDebt,
+    debt: r.debt != null ? fmtBig(r.debt) : null,
+    equity: r.equity != null ? fmtBig(r.equity) : null,
+    freeCashFlow: r.freeCashFlow != null ? fmtBig(r.freeCashFlow) : null,
+    freeCashFlowRaw: r.freeCashFlow,
+    netIncome: r.netIncome != null ? fmtBig(r.netIncome) : null,
+    netIncomeRaw: r.netIncome,
+    roe: r.roe != null ? fmtPct(r.roe) : null,
+  }));
 
   const dividends = chartResult.events?.dividends || {};
   const annual = annualDividends(dividends);
@@ -415,6 +480,8 @@ async function analyzeStock(symbolInput) {
     checks,
     verdict,
     annualDividends: annual,
+    financialCurrency: finCurrency,
+    financialYears,
     meta: {
       source: 'Yahoo Finance',
       minYieldPct: MIN_YIELD_PCT,

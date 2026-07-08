@@ -222,6 +222,38 @@ button[type="submit"]:disabled { opacity: .6; cursor: wait; }
 }
 h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 
+.fin-currency { color: var(--muted); font-weight: 600; text-transform: none; letter-spacing: 0; }
+
+.fin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+.fin-table th, .fin-table td {
+  padding: 10px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.fin-table thead th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.fin-table thead th:first-child { text-align: left; }
+.fin-table tbody th {
+  text-align: left;
+  font-weight: 600;
+}
+.fin-name { display: block; font-size: 13px; color: var(--text); }
+.fin-hint { display: block; font-size: 10px; color: var(--muted); font-weight: 500; }
+.fin-table tbody td { font-weight: 700; font-variant-numeric: tabular-nums; }
+.fin-table tbody tr:hover { background: var(--surface); }
+.fin-pos { color: #86efac; }
+.fin-neg { color: #fca5a5; }
+.fin-na { color: var(--muted); font-weight: 400; }
+
 .checks { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
 .check {
   background: var(--surface);

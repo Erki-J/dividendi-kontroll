@@ -129,7 +129,75 @@ function renderAnalysis(data) {
     histEl.innerHTML = '';
   }
 
+  renderFinancials(data);
+
   document.getElementById('disclaimer').textContent = `${data.meta.disclaimer} Eesmärk: ≥${data.meta.minYieldPct}% tootlus. Allikas: ${data.meta.source}.`;
+}
+
+function finCell(value, tone) {
+  if (value == null) return '<td class="fin-na">—</td>';
+  return `<td class="${tone || ''}">${value}</td>`;
+}
+
+function toneNum(raw) {
+  if (raw == null) return '';
+  return raw >= 0 ? 'fin-pos' : 'fin-neg';
+}
+
+function toneDebt(raw) {
+  if (raw == null) return '';
+  return raw <= 0 ? 'fin-pos' : '';
+}
+
+function renderFinancials(data) {
+  const section = document.getElementById('financials-section');
+  const years = data.financialYears || [];
+
+  if (!years.length) {
+    section.classList.add('hidden');
+    return;
+  }
+  section.classList.remove('hidden');
+
+  document.getElementById('fin-currency').textContent = data.financialCurrency ? `· ${data.financialCurrency}` : '';
+
+  const head = document.getElementById('fin-head');
+  head.innerHTML = '<th>Näitaja</th>' + years.map((y) => `<th>${y.year}</th>`).join('');
+
+  const rows = [
+    {
+      label: 'Netovõlg',
+      hint: 'võlg − raha (miinus = netoraha)',
+      cells: years.map((y) => finCell(y.netDebt, toneDebt(y.netDebtRaw))),
+    },
+    {
+      label: 'Vaba raha (FCF)',
+      hint: 'vaba rahavoog',
+      cells: years.map((y) => finCell(y.freeCashFlow, toneNum(y.freeCashFlowRaw))),
+    },
+    {
+      label: 'Omakapital',
+      hint: 'stockholders equity',
+      cells: years.map((y) => finCell(y.equity)),
+    },
+    {
+      label: 'ROE',
+      hint: 'omakapitali tootlus',
+      cells: years.map((y) => finCell(y.roe != null ? `${y.roe}%` : null, toneNum(y.roe))),
+    },
+    {
+      label: 'Kasum (neto)',
+      hint: 'net income',
+      cells: years.map((y) => finCell(y.netIncome, toneNum(y.netIncomeRaw))),
+    },
+  ];
+
+  document.getElementById('fin-body').innerHTML = rows.map((r) => `
+    <tr>
+      <th scope="row"><span class="fin-name">${r.label}</span><span class="fin-hint">${r.hint}</span></th>
+      ${r.cells.join('')}
+    </tr>
+  `).join('');
 }
 
 async function loadCalendar(force = false) {
