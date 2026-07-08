@@ -107,7 +107,8 @@ function renderAnalysis(data) {
   const histEl = document.getElementById('history');
   if (data.annualDividends?.length) {
     histSection.classList.remove('hidden');
-    histEl.innerHTML = data.annualDividends.map((y) => `
+    const sorted = [...data.annualDividends].sort((a, b) => b.year - a.year);
+    histEl.innerHTML = sorted.map((y) => `
       <div class="year-pill"><strong>${y.year}</strong>${y.total.toFixed(2)} / aktsia</div>
     `).join('');
   } else {
