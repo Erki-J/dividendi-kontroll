@@ -119,10 +119,9 @@ function renderAnalysis(data) {
     histSection.classList.remove('hidden');
     const sorted = [...data.annualDividends].sort((a, b) => b.year - a.year);
     histEl.innerHTML = sorted.map((y) => `
-      <div class="year-pill kpi-style">
+      <div class="year-pill">
         <strong>${y.year}</strong>
-        <div class="year-val">${y.total.toFixed(2)}</div>
-        <span class="year-unit">/ aktsia</span>
+        <div class="year-amount">${y.total.toFixed(2)}<span class="year-unit">/ aktsia</span></div>
       </div>
     `).join('');
   } else {
