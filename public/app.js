@@ -74,6 +74,7 @@ function statusLabel(status) {
 function renderAnalysis(data) {
   document.getElementById('stock-name').textContent = `${data.name} (${data.symbol})`;
   document.getElementById('stock-meta').textContent = [
+    data.resolvedFrom ? `Otsisid: ${data.resolvedFrom} → ${data.symbol}` : null,
     data.exchange,
     data.price != null ? `Hind: ${data.price} ${data.currency || ''}` : null,
     data.exDividendDateFmt ? `Ex: ${data.exDividendDateFmt}` : null,

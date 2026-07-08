@@ -10,6 +10,13 @@ import {
   PORTFOLIO,
   CANDIDATES,
 } from './data/watchlist.mjs';
+import {
+  resolveSymbol,
+  aliasHint,
+  buildAliasMapFromWatchlist,
+} from './data/ticker-aliases.mjs';
+
+const ALIAS_MAP = buildAliasMapFromWatchlist(WATCHLIST);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -306,7 +313,8 @@ function yieldStatus(yieldPct) {
   return 'fail';
 }
 
-async function fetchQuoteLite(symbol) {
+async function fetchQuoteLite(symbolInput) {
+  const { symbol } = resolveSymbol(symbolInput, ALIAS_MAP);
   const summaryResult = await yahooFinance.quoteSummary(symbol, {
     modules: ['price', 'summaryDetail', 'calendarEvents'],
   });
@@ -336,22 +344,32 @@ async function fetchQuoteLite(symbol) {
   };
 }
 
-async function analyzeStock(symbol) {
-  const ticker = symbol.trim().toUpperCase();
+async function analyzeStock(symbolInput) {
+  const { symbol: ticker, resolvedFrom } = resolveSymbol(symbolInput, ALIAS_MAP);
   if (!ticker) throw new Error('Sisesta aktsia ticker.');
 
   const tenYearsAgo = new Date();
   tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
 
-  const [summaryResult, chartResult] = await Promise.all([
-    yahooFinance.quoteSummary(ticker, {
-      modules: ['price', 'summaryDetail', 'calendarEvents', 'financialData', 'defaultKeyStatistics'],
-    }),
-    yahooFinance.chart(ticker, {
-      period1: tenYearsAgo,
-      events: 'div',
-    }).catch(() => ({ events: { dividends: {} } })),
-  ]);
+  let summaryResult;
+  let chartResult;
+  try {
+    [summaryResult, chartResult] = await Promise.all([
+      yahooFinance.quoteSummary(ticker, {
+        modules: ['price', 'summaryDetail', 'calendarEvents', 'financialData', 'defaultKeyStatistics'],
+      }),
+      yahooFinance.chart(ticker, {
+        period1: tenYearsAgo,
+        events: 'div',
+      }).catch(() => ({ events: { dividends: {} } })),
+    ]);
+  } catch (err) {
+    const hint = aliasHint(symbolInput);
+    const msg = err.message?.includes('not found') || err.message?.includes('Not Found')
+      ? `Aktsiat "${symbolInput.trim().toUpperCase()}" ei leitud.${hint ? ` ${hint}` : ''}`
+      : (err.message || 'Analüüs ebaõnnestus.');
+    throw new Error(msg);
+  }
 
   const price = summaryResult.price;
   const summary = summaryResult.summaryDetail;
@@ -359,7 +377,8 @@ async function analyzeStock(symbol) {
   const financial = summaryResult.financialData;
 
   if (!price?.shortName && !price?.longName) {
-    throw new Error(`Aktsiat "${ticker}" ei leitud. Proovi Yahoo tickeri kood (nt VZ, SEDY.L, CPA1T.TL).`);
+    const hint = aliasHint(symbolInput);
+    throw new Error(`Aktsiat "${symbolInput.trim().toUpperCase()}" ei leitud.${hint ? ` ${hint}` : ''}`);
   }
 
   const dividends = chartResult.events?.dividends || {};
@@ -382,6 +401,7 @@ async function analyzeStock(symbol) {
 
   return {
     symbol: ticker,
+    resolvedFrom,
     name: price.longName || price.shortName,
     currency: price.currency,
     exchange: price.exchangeName,
